@@ -1,5 +1,6 @@
 from .headers import Header, SubHeader
 
+
 class Reader(object):
     """
     This class parse a PFSYNC packet into header, subheaders and actions
@@ -7,18 +8,18 @@ class Reader(object):
     It only deals with pfsync version 6
 
     """
-    PFSYNC_VERSION = 6
+    PFSYNC_VERSION = 5
 
     def __init__(self, data=None, logger=None):
         import logging
 
         self.actions = []
-        if data:
-            self.parse(data)
+
+        self.logger = logging.getLogger(__name__)
         if logger:
             self.logger = logger
-        else:
-            self.logger = logging.getLogger(__name__)
+        if data:
+            self.parse(data)
 
     def parse(self, data):
         """
@@ -29,7 +30,7 @@ class Reader(object):
         from .actions import build_from_header
 
         (self.header, data) = Header.from_data(data)
-        if not self.header.version == self.PFSYNC_VERSION:
+        if self.header.version != self.PFSYNC_VERSION:
             self.logger.warning("dealing with bad pfsync version (%d)" % self.header.version)
         while len(data) >= SubHeader.get_cstruct_size():
             (shdr, data) = SubHeader.from_data(data)
@@ -56,27 +57,24 @@ class StateManager(object):
 
         self.handles = [
             self._clr_states,
-            None,
-            None,
-            None,
-            None,
-            None,
-            self._del_state,
-            self._del_state,
-            None,
-            None,
-            None,
-            None,
-            None,
             self._add_state,
             None,
             None,
-            ]
+            None,
+            None,
+            self._del_state,
+            self._del_state,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ]
         if logger:
             self.logger = logger
         else:
             self.logger = logging.getLogger(__name__)
-        
 
     def handle_action(self, action, date):
         """
@@ -88,10 +86,10 @@ class StateManager(object):
         See also .actions.build_from_header
 
         """
-        id = action.header.action_id
-        if id >= 0 and id < len(self.handles) and self.handles[id]:
+        action_id = action.header.action_id
+        if 0 <= action_id < len(self.handles) and self.handles[action_id]:
             for m in action.messages:
-                return self.handles[id](m, date)
+                return self.handles[action_id](m, date)
 
     def _clr_states(self, msg, date):
         """
@@ -120,4 +118,3 @@ class StateManager(object):
 
         """
         self.logger.info("[%s] DEL STATE: %s" % (date, str(state)))
-

@@ -25,9 +25,9 @@ class Header(UnpackableMixin):
     def dump(self):
         from binascii import hexlify
 
-        print "PFSYNC version: %d" % self.version
-        print "PFSYNC packet length: %d" % self.length
-        print "CHECKSUM: %s" % hexlify(self.checksum)
+        print("PFSYNC version: %d" % self.version)
+        print("PFSYNC packet length: %d" % self.length)
+        print("CHECKSUM: %s" % hexlify(self.checksum))
 
 
 class SubHeader(UnpackableMixin):
@@ -53,6 +53,6 @@ class SubHeader(UnpackableMixin):
 
     def dump(self):
         """Simple debug print function"""
-        print "ACTION ID: %d" % self.action_id
-        print "LEN: %d" % self.length
-        print "NB MSG: %d" % self.count
+        print("ACTION ID: %d" % self.action_id)
+        print("LEN: %d" % self.length)
+        print("NB MSG: %d" % self.count)

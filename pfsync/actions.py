@@ -90,7 +90,7 @@ def build_from_header(shdr, data):
     """
     actions = [
         ActionClearStates,
-        None,
+        ActionInsertState,
         None,
         None,
         None,
@@ -102,7 +102,6 @@ def build_from_header(shdr, data):
         None,
         None,
         None,
-        ActionInsertState,
         None,
         None,
         ]

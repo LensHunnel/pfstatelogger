@@ -1,20 +1,19 @@
 from .mixins import UnpackableMixin
 
+
 class PFStateKey(UnpackableMixin):
     """
     A class corresponding to the following C struct:
+    See FreeBSD sources sys/net/pfvar.h
+
     struct pfsync_state_key {
-    struct pf_addr   addr[2];
-    u_int16_t        port[2];
-    u_int16_t        rdomain;
-    sa_family_t      af;
-    u_int8_t         pad;
+        struct pf_addr	 addr[2];
+        u_int16_t	 port[2];
     };
 
-    See OpenBSD sources sys/net/pfvar.h
 
     """
-    unpack_format = '!16s16s 2HHBB'
+    unpack_format = '!16s16s 2H'
 
     @staticmethod
     def format_addr(addr):
@@ -27,60 +26,50 @@ class PFStateKey(UnpackableMixin):
 
         return socket.inet_ntoa(addr[:4])
 
-
     def __init__(self,
                  addr1, addr2,
-                 port1, port2,
-                 rdomain,
-                 address_family,
-                 pad):
+                 port1, port2):
         self.addr = (
             self.format_addr(addr1),
             self.format_addr(addr2))
         self.port = (port1, port2)
-        self.address_family = address_family
 
 
 class MessageState(UnpackableMixin):
     """
     A class corresponding to the following C struct:
-    struct pfsync_state {
-    u_int64_t        id;
-    char             ifname[IFNAMSIZ];
-    struct pfsync_state_key key[2];
-    struct pfsync_state_peer src;
-    struct pfsync_state_peer dst;
-    struct pf_addr   rt_addr;
-    u_int32_t        rule;
-    u_int32_t        anchor;
-    u_int32_t        nat_rule;
-    u_int32_t        creation;
-    u_int32_t        expire;
-    u_int32_t        packets[2][2];
-    u_int32_t        bytes[2][2];
-    u_int32_t        creatorid;
-    int32_t          rtableid[2];
-    u_int16_t        max_mss;
-    sa_family_t      af;
-    u_int8_t         proto;
-    u_int8_t         direction;
-    u_int8_t         log;
-    u_int8_t         pad0;
-    u_int8_t         timeout;
-    u_int8_t         sync_flags;
-    u_int8_t         updates;
-    u_int8_t         min_ttl;
-    u_int8_t         set_tos;
-    u_int16_t        state_flags;
-    u_int8_t         pad[2];
+    struct pfsync_state_1301 {
+        u_int64_t	 id;
+        char		 ifname[IFNAMSIZ];
+        struct pfsync_state_key	key[2];
+        struct pfsync_state_peer src;
+        struct pfsync_state_peer dst;
+        struct pf_addr	 rt_addr;
+        u_int32_t	 rule;
+        u_int32_t	 anchor;
+        u_int32_t	 nat_rule;
+        u_int32_t	 creation;
+        u_int32_t	 expire;
+        u_int32_t	 packets[2][2];
+        u_int32_t	 bytes[2][2];
+        u_int32_t	 creatorid;
+        sa_family_t	 af;
+        u_int8_t	 proto;
+        u_int8_t	 direction;
+        u_int8_t	 __spare[2];
+        u_int8_t	 log;
+        u_int8_t	 state_flags;
+        u_int8_t	 timeout;
+        u_int8_t	 sync_flags;
+        u_int8_t	 updates;
     } __packed;
 
-    See OpenBSD sources sys/net/if_pfsync.h
 
     __str__ and is_nat methods are inspired of OpenBSD;s tcpdump
     See OpenBSD sources src/usr.sbin/tcpdump/print-pfsync.c
 
     """
+
     @classmethod
     def get_unpack_format(cls):
         """
@@ -101,13 +90,11 @@ class MessageState(UnpackableMixin):
         from struct import calcsize
 
         unpack_format = '!Q 16s'
-        unpack_format += '%(state_key_size)ds%(state_key_size)ds' % {
-            'state_key_size': PFStateKey.get_cstruct_size(),
-            }
+        unpack_format += '%(state_key_size)ds%(state_key_size)ds' % {'state_key_size': PFStateKey.get_cstruct_size(), }
         unpack_format += '%(state_peer_size)ds%(state_peer_size)ds' % {
-            'state_peer_size': calcsize('%dsIIIHHBB6B' % calcsize('HBBI')), # to fix
-            }
-        unpack_format += '4I IIIII 4I 4I I 2i HBBBBBBBBBBH 2B'
+            'state_peer_size': calcsize('%dsIIIHHBB6B' % calcsize('HBBI')),  # to fix
+        }
+        unpack_format += '4I IIIII 4I 4I I i BB 2B BBBBB'
         return unpack_format
 
     def __init__(self, id, ifname,
@@ -119,23 +106,18 @@ class MessageState(UnpackableMixin):
                  packets1, packets2, packets3, packets4,
                  bytes1, bytes2, bytes3, bytes4,
                  creator_id,
-                 rtable_id1, rtable_id2,
-                 max_mss,
                  addess_family,
                  protocol,
                  direction,
+                 pad1, pad2,
                  log,
-                 pad0,
+                 state_flags,
                  timeout,
                  sync_flags,
-                 updates,
-                 min_ttl,
-                 set_tos,
-                 state_flags,
-                 pad1, pad2):
+                 updates):
         self.id = id
         self.creator = creator_id
-        self.interface = ifname.split('\0')[0] # Berk
+        self.interface = ifname.split(b'\0')[0]  # Berk
         self.key = (PFStateKey.from_data(key1)[0],
                     PFStateKey.from_data(key2)[0])
         self.packets = ((packets1, packets2), (packets3, packets4))
@@ -152,7 +134,7 @@ class MessageState(UnpackableMixin):
             'id': self.id,
             'creator': self.creator,
             'proto': self.get_protocol_name(),
-            }
+        }
         if self.is_nat():
             str += "%(pub_source)s:%(pub_port)d (%(priv_source)s:%(priv_port)d) -> %(dest)s:%(dest_port)d" % {
                 'pub_source': self.key[0].addr[1],
@@ -161,14 +143,14 @@ class MessageState(UnpackableMixin):
                 'priv_port': self.key[1].port[1],
                 'dest': self.key[0].addr[0],
                 'dest_port': self.key[0].port[0]
-                }
+            }
         else:
             str += "%(pub_source)s:%(pub_port)d -> %(dest)s:%(dest_port)d" % {
                 'pub_source': self.key[0].addr[1],
                 'pub_port': self.key[0].port[1],
                 'dest': self.key[0].addr[0],
                 'dest_port': self.key[0].port[0]
-                }
+            }
         return str
 
     def is_nat(self):

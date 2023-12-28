@@ -45,17 +45,17 @@ def recv_pkt(pcap_hdr, data):
 
 def usage():
     """Print the usage and exits with a erorr code of 1"""
-    print >> sys.stderr, usage_string
+    print(usage_string, file=sys.stderr)
     sys.exit(1)
 
 
 def help():
     """Print the help text and exits with error code 0"""
-    print usage_string
-    print ""
-    print "\t-h: Print out this help message"
-    print "\t-v: Enable verbose mode, log output will also be printed on console"
-    print "\t-d: Enable debug mode, debug messages will be logged"
+    print(usage_string)
+    print("")
+    print("\t-h: Print out this help message")
+    print("\t-v: Enable verbose mode, log output will also be printed on console")
+    print("\t-d: Enable debug mode, debug messages will be logged")
     sys.exit(0)
 
 
@@ -92,7 +92,7 @@ def get_args(argv):
     try:
         opts, args = getopt.getopt(argv, "vhd")
     except getopt.GetoptError as e:
-        print >> sys.stderr, str(e)
+        print(str(e), file=sys.stderr)
         usage()
     for o, v in opts:
         if o == '-h':
@@ -111,10 +111,11 @@ if __name__ == '__main__':
     setup_logger()
     iface = argv[0]
     r = pcapy.open_live(iface, 1600, False, 100)
+    # r = pcapy.open_offline("pfsync.pcap")
     # DLT_PFSYNC == 18
     # See OpenBSD sources sys/net/bpf.h
-    if not r.datalink() == 18:
-        print >> sys.stderr, "Interface %s is not a pfsync interface" % iface
+    if r.datalink() != 121:
+        print("Interface %s is not a pfsync interface" % iface, file=sys.stderr)
         sys.exit(1)
     r.loop(-1, recv_pkt)
     sys.exit(0)
