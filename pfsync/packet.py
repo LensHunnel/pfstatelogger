@@ -28,14 +28,13 @@ class Reader(object):
 
         """
         from .actions import build_from_header
-
         (self.header, data) = Header.from_data(data)
         if self.header.version != self.PFSYNC_VERSION:
             self.logger.warning("dealing with bad pfsync version (%d)" % self.header.version)
         while len(data) >= SubHeader.get_cstruct_size():
             (shdr, data) = SubHeader.from_data(data)
             (action, data) = build_from_header(shdr, data)
-            if action:
+            if action is not None:
                 self.actions.append(action)
         if len(data) > 0:
             self.logger.warning("there is still data to process")

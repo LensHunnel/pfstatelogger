@@ -1,3 +1,5 @@
+from binascii import hexlify
+
 
 class UnpackableMixin(object):
     """

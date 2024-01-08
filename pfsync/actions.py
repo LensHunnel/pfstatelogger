@@ -1,4 +1,5 @@
-from .messages import *
+from .messages import MessageState, MessageDeleteCompressed, MessageClear, MessageInsertAck, MessageUpdateReq, MessageUpdateCompressed
+
 
 class BaseAction(object):
     """
@@ -30,7 +31,7 @@ class BaseAction(object):
         """
         msg_class = cls.get_message_class()
         action = cls(shdr)
-        for i in range(shdr.count):
+        for _ in range(shdr.count):
             (msg, data) = msg_class.from_data(data)
             action.messages.append(msg)
         return (action, data)
@@ -39,6 +40,12 @@ class BaseAction(object):
 class ActionInsertState(BaseAction):
     """Action class related to inserting states"""
     message_class = MessageState
+
+
+class ActionUpdateState(BaseAction):
+    """Action class related to inserting states"""
+    message_class = MessageState
+
 
 
 class ActionDeleteState(BaseAction):
@@ -55,6 +62,20 @@ class ActionClearStates(BaseAction):
     """Action class related to pfsync_clr action"""
     message_class = MessageClear
 
+class ActionInsertAck(BaseAction):
+    """Action class related to pfsync_clr action"""
+    message_class = MessageInsertAck
+
+
+class ActionUpdateRequestState(BaseAction):
+    """Action class related to pfsync_clr action"""
+    message_class = MessageUpdateReq
+
+
+class ActionUpdateCompressedState(BaseAction):
+    """Action class related to pfsync_clr action"""
+    message_class = MessageUpdateCompressed
+
 
 def build_from_header(shdr, data):
     """
@@ -67,23 +88,24 @@ def build_from_header(shdr, data):
     needed amount of data in order to not pollute the rest of the program
 
     Actions ID corresponds to these defines:
-    #define PFSYNC_ACT_CLR          0       /* clear all states */
-    #define PFSYNC_ACT_OINS         1       /* old insert state */
-    #define PFSYNC_ACT_INS_ACK      2       /* ack of insterted state */
-    #define PFSYNC_ACT_OUPD         3       /* old update state */
-    #define PFSYNC_ACT_UPD_C        4       /* "compressed" update state */
-    #define PFSYNC_ACT_UPD_REQ      5       /* request "uncompressed" state */
-    #define PFSYNC_ACT_DEL          6       /* delete state */
-    #define PFSYNC_ACT_DEL_C        7       /* "compressed" delete state */
-    #define PFSYNC_ACT_INS_F        8       /* insert fragment */
-    #define PFSYNC_ACT_DEL_F        9       /* delete fragments */
-    #define PFSYNC_ACT_BUS          10      /* bulk update status */
-    #define PFSYNC_ACT_OTDB         11      /* old TDB replay counter update */
-    #define PFSYNC_ACT_EOF          12      /* end of frame - DEPRECATED */
-    #define PFSYNC_ACT_INS          13      /* insert state */
-    #define PFSYNC_ACT_UPD          14      /* update state */
-    #define PFSYNC_ACT_TDB          15      /* TDB replay counter update */
-    #define PFSYNC_ACT_MAX          16
+
+    #define	PFSYNC_ACT_CLR		0	/* clear all states */
+    #define	PFSYNC_ACT_INS_1301	1	/* insert state */
+    #define	PFSYNC_ACT_INS_ACK	2	/* ack of inserted state */
+    #define	PFSYNC_ACT_UPD_1301	3	/* update state */
+    #define	PFSYNC_ACT_UPD_C	4	/* "compressed" update state */
+    #define	PFSYNC_ACT_UPD_REQ	5	/* request "uncompressed" state */
+    #define	PFSYNC_ACT_DEL		6	/* delete state */
+    #define	PFSYNC_ACT_DEL_C	7	/* "compressed" delete state */
+    #define	PFSYNC_ACT_INS_F	8	/* insert fragment */
+    #define	PFSYNC_ACT_DEL_F	9	/* delete fragments */
+    #define	PFSYNC_ACT_BUS		10	/* bulk update status */
+    #define	PFSYNC_ACT_TDB		11	/* TDB replay counter update */
+    #define	PFSYNC_ACT_EOF		12	/* end of frame */
+    #define PFSYNC_ACT_INS_1400	13	/* insert state */
+    #define PFSYNC_ACT_UPD_1400	14	/* update state */
+    #define	PFSYNC_ACT_MAX		15
+
 
     See OpenBSD sources sys/net/if_pfsync.h
 
@@ -91,10 +113,10 @@ def build_from_header(shdr, data):
     actions = [
         ActionClearStates,
         ActionInsertState,
-        None,
-        None,
-        None,
-        None,
+        ActionInsertAck,
+        ActionUpdateState,
+        ActionUpdateCompressedState,
+        ActionUpdateRequestState,
         ActionDeleteState,
         ActionDeleteCompressedState,
         None,
@@ -105,10 +127,10 @@ def build_from_header(shdr, data):
         None,
         None,
         ]
+    # print(f"action ID: {shdr.action_id} - data={data}")
 
     if shdr.action_id >= 0 and shdr.action_id < len(actions) and actions[shdr.action_id]:
         return actions[shdr.action_id].from_data(data, shdr)
     else:
-        next_offset = shdr.length * shdr.count
-        data = data[next_offset:]
+        data = ""
         return (None, data)

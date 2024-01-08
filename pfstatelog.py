@@ -20,7 +20,7 @@ log_syslog_facility = SysLogHandler.LOG_DAEMON
 log_handlers = [
     (SysLogHandler(address=log_syslog_device, facility=log_syslog_facility), None, None),
     ]
-log_level = level=logging.INFO
+log_level = logging.INFO
 log_format = logging.Formatter('%(name)s: [%(levelname)s] %(message)s')
 logger = logging.getLogger(prog_short_name)
 
@@ -100,6 +100,7 @@ def get_args(argv):
         elif o == '-v':
             log_handlers.append((logging.StreamHandler(stream=sys.stdout), None, None))
         elif o == '-d':
+            global log_level
             log_level = logging.DEBUG
     return args
 
@@ -111,8 +112,6 @@ if __name__ == '__main__':
     setup_logger()
     iface = argv[0]
     r = pcapy.open_live(iface, 1600, False, 100)
-    # r = pcapy.open_offline("pfsync.pcap")
-    # DLT_PFSYNC == 18
     # See OpenBSD sources sys/net/bpf.h
     if r.datalink() != 121:
         print("Interface %s is not a pfsync interface" % iface, file=sys.stderr)

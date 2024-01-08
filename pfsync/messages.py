@@ -67,6 +67,11 @@ class MessageState(UnpackableMixin):
 
     __str__ and is_nat methods are inspired of OpenBSD;s tcpdump
     See OpenBSD sources src/usr.sbin/tcpdump/print-pfsync.c
+    /*
+     * INS, UPD, DEL
+     */
+
+    /* these use struct pfsync_state
 
     """
 
@@ -94,28 +99,27 @@ class MessageState(UnpackableMixin):
         unpack_format += '%(state_peer_size)ds%(state_peer_size)ds' % {
             'state_peer_size': calcsize('%dsIIIHHBB6B' % calcsize('HBBI')),  # to fix
         }
-        unpack_format += '4I IIIII 4I 4I I i BB 2B BBBBB'
+        unpack_format += '4I IIIII 4I 4I I B BB 2B BBBBB'
         return unpack_format
 
-    def __init__(self, id, ifname,
-                 key1, key2,
-                 src, dst,
-                 rt_addr1, rt_addr2, rt_addr3, rt_addr4,
-                 rule, anchor, nat_rule,
-                 creation, expire,
-                 packets1, packets2, packets3, packets4,
-                 bytes1, bytes2, bytes3, bytes4,
-                 creator_id,
-                 addess_family,
-                 protocol,
-                 direction,
-                 pad1, pad2,
-                 log,
-                 state_flags,
-                 timeout,
-                 sync_flags,
-                 updates):
-        self.id = id
+    def __init__(self, *args):
+        _id, ifname, \
+            key1, key2, \
+            _, _, \
+            _, _, _, _, \
+            rule, _, _, \
+            creation, expire, \
+            packets1, packets2, packets3, packets4, \
+            bytes1, bytes2, bytes3, bytes4, \
+            creator_id, \
+            _, \
+            protocol, \
+            direction, \
+            _, _, \
+            log, \
+            _, \
+            timeout, _, _ = args
+        self.id = _id
         self.creator = creator_id
         self.interface = ifname.split(b'\0')[0]  # Berk
         self.key = (PFStateKey.from_data(key1)[0],
@@ -127,16 +131,14 @@ class MessageState(UnpackableMixin):
         self.timeout = timeout
         self.expire = expire
         self.creation = creation
+        self.rule = rule
+        self.log = log
+        print(self)
 
     def __str__(self):
-        str = "%(id)d (created by %(creator)d) - %(interface)s %(proto)s " % {
-            'interface': self.interface,
-            'id': self.id,
-            'creator': self.creator,
-            'proto': self.get_protocol_name(),
-        }
+        msg = f"{hex(self.id)} (created by {hex(self.creator)}) - {self.interface} {self.get_protocol_name()} "
         if self.is_nat():
-            str += "%(pub_source)s:%(pub_port)d (%(priv_source)s:%(priv_port)d) -> %(dest)s:%(dest_port)d" % {
+            msg += "%(pub_source)s:%(pub_port)d (%(priv_source)s:%(priv_port)d) -> %(dest)s:%(dest_port)d" % {
                 'pub_source': self.key[0].addr[1],
                 'pub_port': self.key[0].port[1],
                 'priv_source': self.key[1].addr[1],
@@ -145,13 +147,13 @@ class MessageState(UnpackableMixin):
                 'dest_port': self.key[0].port[0]
             }
         else:
-            str += "%(pub_source)s:%(pub_port)d -> %(dest)s:%(dest_port)d" % {
+            msg += f"%(pub_source)s:%(pub_port)d  {'<-' if self.direction ==0 else '->'} %(dest)s:%(dest_port)d" % {
                 'pub_source': self.key[0].addr[1],
                 'pub_port': self.key[0].port[1],
                 'dest': self.key[0].addr[0],
                 'dest_port': self.key[0].port[0]
             }
-        return str
+        return msg
 
     def is_nat(self):
         """
@@ -171,6 +173,8 @@ class MessageState(UnpackableMixin):
             return "TCP"
         elif self.protocol == 17:
             return "UDP"
+        elif self.protocol == 112:
+            return "VRRP"
         else:
             return str(self.protocol)
 
@@ -202,9 +206,10 @@ class MessageClear(UnpackableMixin):
     This class handle psync_clr messages.
     It corresponds to the following C struct:
     struct pfsync_clr {
-    char                            ifname[IFNAMSIZ];
-    u_int32_t                       creatorid;
+        char				ifname[IFNAMSIZ];
+        u_int32_t			creatorid;
     } __packed;
+
 
     See OpenBSD sources sys/net/if_pfsync.h
 
@@ -216,4 +221,107 @@ class MessageClear(UnpackableMixin):
         self.creator = creator_id
 
     def __str__(self):
-        "Deleted all states on %s (created by %d)" % (self.interface, self.creator)
+        return "Deleted all states on %s (created by %d)" % (self.interface, self.creator)
+
+
+class MessageInsertAck(UnpackableMixin):
+    """
+    This class handle pfsync_ins_ack messages.
+    It corresponds to the following C struct:
+    struct pfsync_ins_ack {
+        u_int64_t			id;
+        u_int32_t			creatorid;
+    } __packed;
+
+
+
+    See OpenBSD sources sys/net/if_pfsync.h
+
+    """
+    unpack_format = "!Q I"
+
+    def __init__(self, id, creator_id):
+        self.id = id
+        self.creator = creator_id
+
+    def __str__(self):
+        return "Ack of inserted state on %s (created by %d)" % (self.id, self.creator)
+
+
+class MessageUpdateReq(UnpackableMixin):
+    """
+    This class handle pfsync_upd_req messages.
+    It corresponds to the following C struct:
+    struct pfsync_upd_req {
+        u_int64_t			id;
+        u_int32_t			creatorid;
+    } __packed;
+
+    See OpenBSD sources sys/net/if_pfsync.h
+
+    """
+    unpack_format = "!Q I"
+
+    def __init__(self, id, creator_id):
+        self.id = id
+        self.creator = creator_id
+
+    def __str__(self):
+        return "Update state on %s (created by %d)" % (self.id, self.creator)
+
+
+class MessageUpdateCompressed(UnpackableMixin):
+    """
+    This class handle pfsync_upd_c messages.
+    It corresponds to the following C struct:
+    struct pfsync_upd_c {
+        u_int64_t			id;
+        struct pfsync_state_peer	src;
+        struct pfsync_state_peer	dst;
+        u_int32_t			creatorid;
+        u_int32_t			expire;
+        u_int8_t			timeout;
+        u_int8_t			_pad[3];
+    } __packed;
+
+    See FreeBSD sources sys/net/if_pfsync.h
+
+    """
+    unpack_format = "!Q "
+
+    @classmethod
+    def get_unpack_format(cls):
+        """
+        Brace yourselves, long dirty string is coming.
+
+        Unpacking of structs is done as a string with the size of the
+        struct and will be unpacked again in __init__
+
+        Tabs are replaced with their size * their type (ex: int a[2] ->
+        'ii') and will be repacked in tuples in __init__
+        This does not stand for ifname
+
+        The pf_addr struct (which is in fact an union containing the
+        128bits ip address) is extracted as 4 32 bits unsigned int which
+        will be our preferred form
+
+        """
+        from struct import calcsize
+
+        unpack_format = '!Q'
+        unpack_format += '%(state_peer_size)ds%(state_peer_size)ds' % {
+            'state_peer_size': calcsize('%dsIIIHHBB6B' % calcsize('HBBI')),  # to fix
+        }
+        unpack_format += 'IIB 3B'
+        return unpack_format
+
+    def __init__(self, id, src, dst, creator_id, expire, timeout, pad1, pad2, pad3):
+        self.id = id
+        self.creator = creator_id
+        self.dst = dst
+        self.src = src
+        self.expire = expire
+        self.timeout = timeout
+
+    def __str__(self):
+        return "Compressed update state on %s (created by %d)" % (self.id, self.creator)
