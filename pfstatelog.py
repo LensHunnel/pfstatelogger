@@ -90,7 +90,7 @@ def get_args(argv):
     import getopt
 
     try:
-        opts, args = getopt.getopt(argv, "vhd")
+        opts, args = getopt.getopt(argv, "vhdl")
     except getopt.GetoptError as e:
         print(str(e), file=sys.stderr)
         usage()
