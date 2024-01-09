@@ -18,7 +18,7 @@ log_syslog_facility = SysLogHandler.LOG_DAEMON
 # level or format may be None in which case it will be overwritten by
 # the defaults log_level and log_format respectively
 log_handlers = [
-    (SysLogHandler(address=log_syslog_device, facility=log_syslog_facility), None, None),
+
     ]
 log_level = logging.INFO
 log_format = logging.Formatter('%(name)s: [%(levelname)s] %(message)s')
@@ -110,6 +110,7 @@ def get_args(argv):
 
 if __name__ == '__main__':
     argv = get_args(sys.argv[1:])
+    log_handlers.append((SysLogHandler(address=log_syslog_device, facility=log_syslog_facility), None, None))
     if not len(argv):
         usage()
     setup_logger()
