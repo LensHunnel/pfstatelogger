@@ -83,10 +83,10 @@ Compatibility
 This script works with the version 6 of PFsync (I haven't tested any
 other). 
 
-This script runs under OpenBSD 5.3 but should work on any other BSD
-with Packetfilter and PFsyncV6 (not tested). 
+This script runs under FreeBSD 13.2 but doesn't work on OpenBSD
+It should work On others BSD Based on FreeBSD with Packetfilter and PFsyncV5 (not tested). 
 
-I only tested this script with Python 2.7.
+I only tested this script with Python 3.9.
 
 
 Tools used
@@ -94,14 +94,14 @@ Tools used
 
 The script is wrote in Python. 
 
-I used the [pcapy module](http://corelabs.coresecurity.com/index.php?module=Wiki&action=view&type=tool&name=Pcapy)
+I used the [pcapy module](https://github.com/stamparm/pcapy-ng)
 to deal with PCAP packets.
 
 
 Licensing
 ---------
 
-Since I spent a few hours reversing PF's kernel code and I wish no one
+Since I spent a few hours reversing PF's kernel code for FreeBSD and the most part as done by @Korrigan and I wish no one
 to do the same except if you're some kind of masochist person, I release
 this source under the MIT licence (see `LICENSE` file).
 
