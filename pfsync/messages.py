@@ -133,7 +133,6 @@ class MessageState(UnpackableMixin):
         self.creation = creation
         self.rule = rule
         self.log = log
-        print(self)
 
     def __str__(self):
         msg = f"{hex(self.id)} (created by {hex(self.creator)}) - {self.interface} {self.get_protocol_name()} "

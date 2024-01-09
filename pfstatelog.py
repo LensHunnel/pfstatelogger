@@ -102,6 +102,9 @@ def get_args(argv):
         elif o == '-d':
             global log_level
             log_level = logging.DEBUG
+        elif o == '-l':
+            global log_syslog_device
+            log_syslog_device = '/var/run/log'
     return args
 
 

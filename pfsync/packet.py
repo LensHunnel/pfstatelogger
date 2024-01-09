@@ -55,14 +55,14 @@ class StateManager(object):
         import logging
 
         self.handles = [
-            self._clr_states,
+            None,
             self._add_state,
             None,
             None,
             None,
             None,
-            self._del_state,
-            self._del_state,
+            None,
+            None,
             None,
             None,
             None,
@@ -107,7 +107,7 @@ class StateManager(object):
         See OpenBSD sources sys/net/pfvar.h
 
         """
-        if state.direction == 2:
+        if state.direction == 2 and state.is_nat():
             self.logger.info("[%s] INS STATE: %s" % (date, str(state)))
 
     def _del_state(self, state, date):
